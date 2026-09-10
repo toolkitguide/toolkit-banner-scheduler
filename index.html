@@ -148,8 +148,9 @@
   .name-cell .b-slot .slot-badge{margin-right:6px;}
   .name-cell .b-slot{font-size:14px; color:var(--sub); margin-top:2px;}
   .empty-row td{text-align:center; padding:48px 0; color:var(--sub); font-size:15px;}
-  .loading-spinner{display:inline-block; width:14px; height:14px; margin-right:8px; vertical-align:-2px;
-    border:2px solid #dcdcdc; border-top-color:var(--sub, #8A8F98); border-radius:50%;
+  .empty-row td.is-loading{font-size:16.5px; font-weight:600; color:#4a4f57;}
+  .loading-spinner{display:inline-block; width:20px; height:20px; margin-right:10px; vertical-align:-5px;
+    border:3px solid #dcdcdc; border-top-color:#2F6FED; border-radius:50%;
     animation:spin .7s linear infinite;}
   @keyframes spin{ to { transform:rotate(360deg); } }
 
@@ -875,15 +876,16 @@ function renderStatusTable(){
     rows = rows.filter(b => (b.name + slotById(b.slotId).name + b.team + (b.applicant || '')).toLowerCase().includes(t));
   }
   if(rows.length === 0){
-    let msg;
+    let msg, cellClass = '';
     if(isLoading){
-      msg = '<span class="loading-spinner"></span> 데이터를 불러오는 중입니다...';
+      msg = '<span class="loading-spinner"></span>데이터를 불러오는 중입니다...';
+      cellClass = ' class="is-loading"';
     }else if(bookings.length === 0){
       msg = '아직 등록된 배너가 없습니다. 상단의 “+ 배너 신청”으로 시작하세요.';
     }else{
       msg = '조건에 맞는 신청 내역이 없습니다.';
     }
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${msg}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="7"${cellClass}>${msg}</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(b => {
