@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -148,6 +148,10 @@
   .name-cell .b-slot .slot-badge{margin-right:6px;}
   .name-cell .b-slot{font-size:14px; color:var(--sub); margin-top:2px;}
   .empty-row td{text-align:center; padding:48px 0; color:var(--sub); font-size:15px;}
+  .loading-spinner{display:inline-block; width:14px; height:14px; margin-right:8px; vertical-align:-2px;
+    border:2px solid #dcdcdc; border-top-color:var(--sub, #8A8F98); border-radius:50%;
+    animation:spin .7s linear infinite;}
+  @keyframes spin{ to { transform:rotate(360deg); } }
 
   /* ---------- dashboard ---------- */
   .dash-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:12px;}
@@ -739,6 +743,7 @@ let ganttStatusFilter = 'all';
 let searchTerm = '';
 let currentMonth = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
 let role = 'applicant';
+let isLoading = true;   // 최초 데이터 로딩 중 여부 (로딩 중 빈 화면과 실제 빈 상태를 구분하기 위함)
 
 /* 관리자 인증
  * - 공유 모드: 암호는 Apps Script 스크립트 속성 ADMIN_PASSWORD 에만 존재(소스에 없음).
@@ -870,9 +875,14 @@ function renderStatusTable(){
     rows = rows.filter(b => (b.name + slotById(b.slotId).name + b.team + (b.applicant || '')).toLowerCase().includes(t));
   }
   if(rows.length === 0){
-    const msg = bookings.length === 0
-      ? '아직 등록된 배너가 없습니다. 상단의 “+ 배너 신청”으로 시작하세요.'
-      : '조건에 맞는 신청 내역이 없습니다.';
+    let msg;
+    if(isLoading){
+      msg = '<span class="loading-spinner"></span> 데이터를 불러오는 중입니다...';
+    }else if(bookings.length === 0){
+      msg = '아직 등록된 배너가 없습니다. 상단의 “+ 배너 신청”으로 시작하세요.';
+    }else{
+      msg = '조건에 맞는 신청 내역이 없습니다.';
+    }
     tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${msg}</td></tr>`;
     return;
   }
@@ -1408,6 +1418,7 @@ async function init(){
   renderStatusChips();
   renderGanttChips();
   renderGantt();
+  renderStatusTable();  // 데이터 도착 전: "불러오는 중" 표시 (isLoading=true 상태)
 
   try{
     await loadBookings();
@@ -1415,6 +1426,7 @@ async function init(){
     console.warn(err);
     showToast('데이터를 불러오지 못했습니다. 네트워크 확인 후 새로고침 해주세요.');
   }
+  isLoading = false;
   refreshStatusViews();  // autoExpire + 저장 + 전체 재렌더
 
   // 시트 모드: 다른 사용자의 변경을 주기적으로 반영 (60초, 모달·드로어 열려있으면 건너뜀)
