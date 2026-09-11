@@ -36,11 +36,10 @@
   /* ---------- 관리자 모드 표시 ---------- */
   .admin-strip{
     display:none; align-items:center; justify-content:center; gap:8px;
-    background:var(--ink); color:#fff; font-size:16px; font-weight:800;
+    background:var(--orange); color:#fff; font-size:16px; font-weight:800;
     letter-spacing:.2px; padding:10px 12px; text-align:center;
   }
   body.is-admin .admin-strip{display:flex;}
-  body.is-admin{background:#fff8f4;}
 
   /* ---------- header ---------- */
   .app-header{
@@ -59,8 +58,15 @@
   .brand .logo{
     width:40px; height:40px; border-radius:9px; object-fit:contain; display:block;
   }
+  .brand-title-row{display:flex; align-items:center; gap:8px;}
   .brand-title{font-weight:800; font-size:26px; line-height:1.2;}
   .brand-sub{font-size:13px; color:var(--sub); letter-spacing:.3px; margin-top:1px;}
+  .admin-badge{
+    display:none; align-items:center; justify-content:center;
+    background:var(--orange); color:#fff; font-size:12.5px; font-weight:800;
+    padding:3px 10px; border-radius:999px; letter-spacing:.2px;
+  }
+  body.is-admin .admin-badge{display:inline-flex;}
   .btn-primary{
     background:var(--orange); color:#fff; border:none; padding:11px 18px;
     border-radius:9px; font-weight:800; font-size:16px; cursor:pointer;
@@ -388,7 +394,10 @@
       <div class="brand">
         <img class="logo" src="toolkit_logo.svg" alt="아이스크림 툴킷 로고">
         <div>
-          <div class="brand-title">툴킷 배너 일정 관리</div>
+          <div class="brand-title-row">
+            <span class="brand-title">툴킷 배너 일정 관리</span>
+            <span class="admin-badge">관리자</span>
+          </div>
         </div>
       </div>
       <div class="topbar-actions">
@@ -1093,7 +1102,9 @@ document.getElementById('adminForm').addEventListener('submit', async e => {
   e.preventDefault();
   const pw = document.getElementById('adminPw').value;
   const btn = e.target.querySelector('button[type="submit"]');
+  const originalLabel = btn.textContent;
   btn.disabled = true;
+  btn.textContent = '확인 중...';
   let ok = false;
   try{
     ok = await verifyAdmin(pw);
@@ -1101,9 +1112,11 @@ document.getElementById('adminForm').addEventListener('submit', async e => {
     console.warn(err);
     showToast('인증 요청에 실패했습니다. 네트워크를 확인해주세요.');
     btn.disabled = false;
+    btn.textContent = originalLabel;
     return;
   }
   btn.disabled = false;
+  btn.textContent = originalLabel;
   if(ok){
     role = 'admin';
     adminOverlay.classList.remove('open');
