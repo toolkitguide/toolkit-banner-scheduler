@@ -19,9 +19,9 @@
     --sub:#8b8f97;
     --white:#ffffff;
     --radius:10px;
-    --review-ink:#e11d48; --review-bg:#ffebef; --review-dot:#ff3b5c;
-    --sched-ink:#1f5fdb; --sched-bg:#e9f1fe; --sched-dot:#2f6fed;
-    --live-ink:#0e9257; --live-bg:#e4f7ef; --live-dot:#12b76a;
+    --review-ink:#e11d48; --review-bg:#ffebef; --review-dot:#D51832;
+    --sched-ink:#1f5fdb; --sched-bg:#e9f1fe; --sched-dot:#0079DD;
+    --live-ink:#0e9257; --live-bg:#e4f7ef; --live-dot:#009F59;
     --ended-ink:#5f646e; --ended-bg:#f1f2f4; --ended-dot:#8a8f98;
     --reject-ink:#be123c; --reject-bg:#ffe9ec; --reject-dot:#f43f5e;
   }
@@ -36,12 +36,11 @@
   /* ---------- 관리자 모드 표시 ---------- */
   .admin-strip{
     display:none; align-items:center; justify-content:center; gap:8px;
-    background:var(--ink); color:#fff; font-size:13.5px; font-weight:800;
-    letter-spacing:.2px; padding:9px 12px; text-align:center;
+    background:var(--ink); color:#fff; font-size:16px; font-weight:800;
+    letter-spacing:.2px; padding:10px 12px; text-align:center;
   }
   body.is-admin .admin-strip{display:flex;}
   body.is-admin{background:#fff8f4;}
-  body.is-admin .app-header{border-bottom-color:var(--orange); box-shadow:0 1px 0 var(--orange);}
 
   /* ---------- header ---------- */
   .app-header{
@@ -74,8 +73,6 @@
     border-radius:9px; font-weight:700; font-size:15px; cursor:pointer; font-family:inherit;
   }
   .btn-ghost:hover{background:#fafafa;}
-  .btn-ghost.danger{color:var(--reject-ink); border-color:#f3c0c9;}
-  .btn-ghost.danger:hover{background:var(--reject-bg);}
 
   /* ---------- tabs ---------- */
   .tabs{display:flex; gap:6px; margin-bottom:0;}
@@ -131,28 +128,31 @@
   .status-table tbody tr:last-child td{border-bottom:none;}
   .status-table tbody tr:hover{background:#fbfbfb;}
 
+  /* 게시 현황 탭의 칩(.chip)과 동일한 스타일: 흰 배경 + 회색 보더 + 검정 텍스트, 원형만 상태색 */
   .pill{
     display:inline-flex; align-items:center; justify-content:center; gap:6px;
     min-width:92px; padding:5px 11px; border-radius:20px;
     font-size:14px; font-weight:800; white-space:nowrap;
+    background:#fff; border:1px solid var(--border); color:var(--ink);
   }
-  .pill .dot{width:6px; height:6px; border-radius:50%;}
-  .pill.review{background:var(--review-bg); color:var(--review-ink);} .pill.review .dot{background:var(--review-dot);}
-  .pill.scheduled{background:var(--sched-bg); color:var(--sched-ink);} .pill.scheduled .dot{background:var(--sched-dot);}
-  .pill.live{background:var(--live-bg); color:var(--live-ink);} .pill.live .dot{background:var(--live-dot);}
-  .pill.ended{background:var(--ended-bg); color:var(--ended-ink);} .pill.ended .dot{background:var(--ended-dot);}
-  .pill.rejected{background:var(--reject-bg); color:var(--reject-ink);} .pill.rejected .dot{background:var(--reject-dot);}
+  .pill .dot{width:8px; height:8px; border-radius:50%; flex:none;}
+  .pill.review .dot{background:var(--review-dot);}
+  .pill.scheduled .dot{background:var(--sched-dot);}
+  .pill.live .dot{background:var(--live-dot);}
+  .pill.ended .dot{background:var(--ended-dot);}
+  .pill.rejected .dot{background:var(--reject-dot);}
 
   .tag{font-size:13.5px; font-weight:800; padding:3px 9px; border-radius:6px;}
-  .tag.external{background:var(--orange-light); color:var(--orange);}
-  .tag.internal{background:#eef1ff; color:#4c5fd5;}
+  .tag.external{background:#eef1ff; color:#4c5fd5;}
+  .tag.internal{background:var(--orange-light); color:var(--orange);}
 
+  /* 공통 구좌 = 파랑, 툴킷 전용 구좌 = 오렌지 */
   .slot-badge{
     display:inline-block; font-size:11.5px; font-weight:800; line-height:1.5;
     padding:1px 7px; border-radius:6px; vertical-align:middle;
-    background:var(--orange-light); color:var(--orange);
+    background:#eef1ff; color:#4c5fd5;
   }
-  .slot-badge.internal{background:#eef1ff; color:#4c5fd5;}
+  .slot-badge.internal{background:var(--orange-light); color:var(--orange);}
 
   .name-cell .b-name{font-weight:800;}
   .name-cell .b-slot .slot-badge{margin-right:6px;}
@@ -203,13 +203,13 @@
   }
   .day-head.is-today .d-num{background:var(--orange); color:#fff;}
   .bar{
-    position:absolute; height:26px; top:8px; z-index:1; border-radius:999px; display:flex; align-items:center;
-    padding:0 4px; font-size:13.5px; font-weight:800; color:#fff; cursor:pointer;
+    position:absolute; height:32px; top:6px; z-index:1; border-radius:999px; display:flex; align-items:center;
+    padding:0 5px; font-size:16px; font-weight:800; color:#fff; cursor:pointer;
     overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,.08);
   }
   .bar .bar-team{
-    flex:none; max-width:46%; margin-right:6px; padding:1px 7px; border-radius:999px;
-    font-size:11px; font-weight:800; background:rgba(255,255,255,.24);
+    flex:none; max-width:46%; margin-right:6px; padding:2px 8px; border-radius:999px;
+    font-size:14px; font-weight:800; background:rgba(255,255,255,.24);
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .bar .bar-label{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
@@ -227,7 +227,7 @@
   .slot-group-card h3{margin:0 0 4px; font-size:17px;}
   .slot-group-card p.desc{margin:0 0 14px; font-size:14.5px; color:var(--sub);}
   .slot-guide-note{
-    background:var(--orange-light); border:1px solid #ffd6c4; border-radius:10px;
+    background:#f1f2f4; border:1px solid var(--border); border-radius:10px;
     padding:12px 14px; margin-bottom:14px;
     display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
   }
@@ -246,9 +246,9 @@
   .slot-acc-head .n{font-weight:700; font-size:15.5px; flex:1;}
   .slot-acc-head .badge{
     font-size:13px; font-weight:800; padding:3px 8px; border-radius:6px; flex:none;
-    background:var(--orange-light); color:var(--orange);
+    background:#eef1ff; color:#4c5fd5;
   }
-  .slot-acc-head .badge.internal-only{background:#eef1ff; color:#4c5fd5;}
+  .slot-acc-head .badge.internal-only{background:var(--orange-light); color:var(--orange);}
   .slot-acc-head .chev{color:var(--sub); font-size:15px; flex:none; line-height:1; transition:transform .2s ease;}
   .slot-acc-head[aria-expanded="true"] .chev{transform:rotate(180deg);}
   .slot-acc-body{padding:2px 2px 14px;}
@@ -288,6 +288,35 @@
   .row-2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   select.select, input.input, textarea.input{width:100%;}
   textarea.input{resize:vertical; min-height:64px;}
+
+  /* ---------- 게시 기간 미니 달력 ----------
+   * position:fixed 로 뷰포트 기준 배치(JS에서 top/left/width 계산).
+   * absolute였을 때는 모달의 스크롤 가능 영역에 포함되어 모달에 불필요한 스크롤이 생겼음. */
+  .datefield{position:relative;}
+  .date-display{cursor:pointer; background:#fff;}
+  .date-pop{
+    position:fixed; z-index:70;
+    background:#fff; border:1px solid var(--border); border-radius:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,.14); padding:12px;
+    max-height:calc(100vh - 16px); overflow-y:auto;
+  }
+  .date-pop[hidden]{display:none;}
+  .date-pop-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; font-weight:800; font-size:14px;}
+  .date-pop-head button{border:1px solid var(--border); background:#fff; width:26px; height:26px; border-radius:7px; cursor:pointer; font-size:14px; font-family:inherit;}
+  .date-pop-head button:hover{background:#fafafa;}
+  .date-pop-weekdays{display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:11.5px; color:var(--sub); font-weight:800; margin-bottom:4px;}
+  .date-pop-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:2px;}
+  .date-cell{
+    aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    font-size:13px; border-radius:7px; cursor:pointer; border:none; background:none;
+    font-family:inherit; color:var(--ink); padding:0;
+  }
+  .date-cell.outside{visibility:hidden; cursor:default;}
+  .date-cell:hover:not(.disabled){background:var(--orange-light);}
+  .date-cell.disabled{color:#c7cad1; text-decoration:line-through; cursor:not-allowed; background:#f4f4f5;}
+  .date-cell.today{box-shadow:inset 0 0 0 1.5px var(--orange);}
+  .date-cell.selected{background:var(--orange); color:#fff; font-weight:800; box-shadow:none;}
+  .date-pop-legend{margin-top:8px; font-size:11.5px; color:var(--sub); line-height:1.5;}
   .modal-actions{display:flex; gap:8px; margin-top:6px;}
   .modal-actions button{flex:1;}
 
@@ -351,7 +380,7 @@
 </style>
 </head>
 <body>
-<div class="admin-strip" id="adminStrip">🔒 관리자 모드로 접속 중입니다 — 승인/반려, 내부 배너 등록이 가능합니다</div>
+<div class="admin-strip" id="adminStrip">관리자 모드로 접속 중입니다</div>
 <div class="app">
 
   <header class="app-header">
@@ -425,7 +454,7 @@
         <p class="desc">외부 신청은 이 구좌에서만 접수됩니다.</p>
         <div class="slot-guide-note">
           <p>공통 구좌는 노션 가이드에서 각 구좌의 PSD 파일과 자세한 제작 가이드를 확인할 수 있습니다.</p>
-          <a class="btn-ghost notion-btn" href="https://toolkit-guide.notion.site/3d557bbaeb1c80ca96ccfcf2851b326d" target="_blank" rel="noopener">📄 공통 구좌 노션 가이드 열기 ↗</a>
+          <a class="btn-ghost notion-btn" href="https://toolkit-guide.notion.site/3d557bbaeb1c80ca96ccfcf2851b326d" target="_blank" rel="noopener">공통 구좌 노션 가이드 열기 ↗</a>
         </div>
         <div id="slotsCommon"></div>
       </div>
@@ -470,8 +499,14 @@
       <div class="field">
         <label>게시 기간</label>
         <div class="row-2">
-          <input class="input" type="date" id="startDate" required>
-          <input class="input" type="date" id="endDate" required>
+          <div class="datefield">
+            <input class="input date-display" type="text" id="startDate" placeholder="시작일 선택" readonly required>
+            <div class="date-pop" id="startDatePop" hidden></div>
+          </div>
+          <div class="datefield">
+            <input class="input date-display" type="text" id="endDate" placeholder="종료일 선택" readonly required>
+            <div class="date-pop align-right" id="endDatePop" hidden></div>
+          </div>
         </div>
       </div>
       <div class="field">
@@ -551,8 +586,14 @@
       <div class="field">
         <label>게시 기간</label>
         <div class="row-2">
-          <input class="input" type="date" id="int_startDate" required>
-          <input class="input" type="date" id="int_endDate" required>
+          <div class="datefield">
+            <input class="input date-display" type="text" id="int_startDate" placeholder="시작일 선택" readonly required>
+            <div class="date-pop" id="int_startDatePop" hidden></div>
+          </div>
+          <div class="datefield">
+            <input class="input date-display" type="text" id="int_endDate" placeholder="종료일 선택" readonly required>
+            <div class="date-pop align-right" id="int_endDatePop" hidden></div>
+          </div>
         </div>
       </div>
       <div class="field">
@@ -656,13 +697,14 @@ const STATUS_META = {
    기존 '반려' 상태 건은 이 값과 무관하게 정상 표시됩니다. */
 const REJECT_ENABLED = false;
 
-/* 공통 구좌 신청 시 동시 등록 가능 개수 제한.
+/* 구좌 동시 등록 가능 개수 제한 (공통·툴킷전용 구분 없이 전체 통일).
  * - 메인 플로팅 배너(A/B/C): Type 상관없이 합쳐서 동시 최대 3건
- * - 메인 팝업 레이어(A/B, 공통): Type 상관없이 합쳐서 동시 최대 1건
- * 그룹에 속하지 않은 구좌(내부 전용 등)는 제한 없음. */
+ * - 메인 팝업 레이어(A/B/C/D, 공통+툴킷전용): Type 상관없이 합쳐서 동시 최대 1건
+ * 그룹에 속하지 않은 구좌(도구내 안내 툴팁 등)는 제한 없음.
+ * 외부 신청·내부 등록 모두 이 제한을 받습니다. */
 const CAPACITY_GROUPS = [
   { slots:['floatA','floatB','floatC'], max:3 },
-  { slots:['layerA','layerB'], max:1 },
+  { slots:['layerA','layerB','layerC','layerD'], max:1 },
 ];
 /* 이 상태들은 실제로 자리를 차지하는 것으로 간주(검토중도 포함 — 승인 전 중복 접수 방지) */
 const ACTIVE_STATUSES = ['review','scheduled','live'];
@@ -837,6 +879,162 @@ const slotBadge = slot => slot && slot.group === 'internal'
 const parseYMD = str => { const [y,m,d] = String(str).split('-').map(Number); return new Date(y, (m||1)-1, d||1); };
 const fmt = d => { const dt = typeof d === 'string' ? parseYMD(d) : d; return `${dt.getMonth()+1}.${String(dt.getDate()).padStart(2,'0')}`; };
 const fmtFull = d => { const dt = typeof d === 'string' ? parseYMD(d) : new Date(d); return `${dt.getFullYear()}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')}`; };
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate()+n);
+const daysBetween = (a, b) => Math.round((b - a) / 86400000);
+
+/* ---------------- 게시 기간 미니 달력 ----------------
+ * 그룹 정원이 꽉 찬 날짜는 회색으로 막아 아예 선택할 수 없게 한다.
+ * - 시작일: 그 하루만으로도 이미 그룹 정원이 찬 날은 비활성화
+ * - 종료일: 시작일 이후 '처음으로 정원이 차는 날'부터는 비활성화(그 전날까지만 선택 가능) */
+const WEEKDAY_LABELS = ['일','월','화','수','목','금','토'];
+const DATE_HORIZON_DAYS = 730; // 종료일 상한 탐색 범위(약 2년)
+
+function isDayFull(group, date){
+  if(!group) return false;
+  return bookings.filter(b =>
+    group.slots.includes(b.slotId) &&
+    ACTIVE_STATUSES.includes(b.status) &&
+    parseYMD(b.start) <= date && parseYMD(b.end) >= date
+  ).length >= group.max;
+}
+function firstFullDayFrom(group, fromDate, horizonDays){
+  if(!group) return null;
+  for(let i=0; i<=horizonDays; i++){
+    const d = addDays(fromDate, i);
+    if(isDayFull(group, d)) return d;
+  }
+  return null;
+}
+function ymd(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+/* cfg: { inputId, popId, role:'start'|'end', slotSelId, counterpartId } */
+function attachDatePicker(cfg){
+  const input = document.getElementById(cfg.inputId);
+  const pop = document.getElementById(cfg.popId);
+  const alignRight = pop.classList.contains('align-right');
+  let viewMonth = null;
+
+  /* 뷰포트 기준 좌표로 배치(모달 스크롤 영역에 영향을 주지 않도록 position:fixed 사용).
+   * 화면 높이가 줄어들어 아래쪽에 놓을 공간이 부족하면 입력창 위쪽으로 뒤집어서 띄운다.
+   * pop은 이미 hidden=false + 내용 렌더링이 끝난 상태에서 호출해야 실제 높이를 잴 수 있다. */
+  function positionPop(){
+    const rect = input.getBoundingClientRect();
+    const w = Math.min(260, window.innerWidth - 32);
+    let left = alignRight ? rect.right - w : rect.left;
+    left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+    pop.style.width = w + 'px';
+    pop.style.left = left + 'px';
+
+    const popH = pop.offsetHeight;
+    const spaceBelow = window.innerHeight - rect.bottom - 6;
+    const spaceAbove = rect.top - 6;
+    let top;
+    if(spaceBelow >= popH || spaceBelow >= spaceAbove){
+      top = rect.bottom + 6;
+    }else{
+      top = rect.top - popH - 6;
+    }
+    top = Math.max(8, Math.min(top, window.innerHeight - popH - 8));
+    pop.style.top = top + 'px';
+  }
+
+  function isDisabled(d){
+    const slotId = document.getElementById(cfg.slotSelId).value;
+    const group = findCapacityGroup(slotId);
+    if(cfg.role === 'start') return isDayFull(group, d);
+    const startVal = cfg.counterpartId ? document.getElementById(cfg.counterpartId).value : '';
+    if(!startVal) return isDayFull(group, d);
+    const s = parseYMD(startVal);
+    if(d < s) return true;
+    const limit = firstFullDayFrom(group, s, DATE_HORIZON_DAYS);
+    return !!(limit && d >= limit);
+  }
+
+  function render(){
+    const slotId = document.getElementById(cfg.slotSelId).value;
+    const group = findCapacityGroup(slotId);
+    const label = `${viewMonth.getFullYear()}.${String(viewMonth.getMonth()+1).padStart(2,'0')}`;
+    const firstDow = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1).getDay();
+    const numDays = new Date(viewMonth.getFullYear(), viewMonth.getMonth()+1, 0).getDate();
+    const curVal = input.value ? parseYMD(input.value) : null;
+
+    let cellsHtml = '';
+    for(let i=0; i<firstDow; i++) cellsHtml += `<span class="date-cell outside"></span>`;
+    for(let d=1; d<=numDays; d++){
+      const date = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), d);
+      const disabled = isDisabled(date);
+      const cls = ['date-cell'];
+      if(disabled) cls.push('disabled');
+      if(daysBetween(TODAY, date) === 0) cls.push('today');
+      if(curVal && daysBetween(curVal, date) === 0) cls.push('selected');
+      cellsHtml += `<button type="button" class="${cls.join(' ')}" data-date="${ymd(date)}" ${disabled ? 'disabled' : ''}>${d}</button>`;
+    }
+    pop.innerHTML = `
+      <div class="date-pop-head">
+        <button type="button" class="date-pop-prev">‹</button>
+        <span>${label}</span>
+        <button type="button" class="date-pop-next">›</button>
+      </div>
+      <div class="date-pop-weekdays">${WEEKDAY_LABELS.map(w => `<span>${w}</span>`).join('')}</div>
+      <div class="date-pop-grid">${cellsHtml}</div>
+      ${group ? `<div class="date-pop-legend">회색 = 선택이 불가능한 날짜<br>(동일 기간 메인 플로팅 최대 3건, 메인 팝업 최대 1건 탑재 가능)</div>` : ''}
+    `;
+    pop.querySelector('.date-pop-prev').addEventListener('click', e => {
+      e.stopPropagation();
+      viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth()-1, 1);
+      render();
+    });
+    pop.querySelector('.date-pop-next').addEventListener('click', e => {
+      e.stopPropagation();
+      viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth()+1, 1);
+      render();
+    });
+    pop.querySelectorAll('.date-cell[data-date]:not(.disabled)').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        input.value = btn.dataset.date;
+        input.dispatchEvent(new Event('input', { bubbles:true }));
+        // 시작일을 바꿔서 기존 종료일이 더 이상 유효하지 않게 되면 종료일을 비운다
+        if(cfg.role === 'start' && cfg.counterpartId){
+          const endInput = document.getElementById(cfg.counterpartId);
+          if(endInput.value){
+            const s = parseYMD(btn.dataset.date);
+            const e2 = parseYMD(endInput.value);
+            const limit = firstFullDayFrom(group, s, DATE_HORIZON_DAYS);
+            if(e2 < s || (limit && e2 >= limit)){
+              endInput.value = '';
+              endInput.dispatchEvent(new Event('input', { bubbles:true }));
+            }
+          }
+        }
+        closePop();
+      });
+    });
+  }
+
+  function openPop(){
+    let base = TODAY;
+    if(input.value) base = parseYMD(input.value);
+    else if(cfg.role === 'end' && cfg.counterpartId && document.getElementById(cfg.counterpartId).value){
+      base = parseYMD(document.getElementById(cfg.counterpartId).value);
+    }
+    viewMonth = new Date(base.getFullYear(), base.getMonth(), 1);
+    document.querySelectorAll('.date-pop').forEach(p => { if(p !== pop) p.hidden = true; });
+    render();
+    pop.hidden = false; // positionPop()이 실제 높이를 잴 수 있도록 먼저 보이게 함
+    positionPop();
+  }
+  function closePop(){ pop.hidden = true; }
+
+  input.addEventListener('click', e => { e.stopPropagation(); openPop(); });
+  pop.addEventListener('click', e => e.stopPropagation());
+  document.addEventListener('click', () => closePop());
+  // 스크롤/리사이즈로 기준 위치가 바뀌면 위치가 어긋나므로 그냥 닫는다
+  window.addEventListener('scroll', () => { if(!pop.hidden) closePop(); }, true);
+  window.addEventListener('resize', () => { if(!pop.hidden) closePop(); });
+
+  return { closePop };
+}
 
 /* ---------------- 탭 전환 ---------------- */
 document.querySelectorAll('.tab').forEach(btn => {
@@ -1093,7 +1291,7 @@ function renderGantt(){
   html += `</div></div>`;
 
   // slot rows
-  const BAR_H = 26, BAR_GAP = 4, ROW_PAD = 8;
+  const BAR_H = 32, BAR_GAP = 4, ROW_PAD = 8;
 
   SLOTS.forEach(slot => {
     // 이번 달에 걸치는 예약을 골라 표시 구간(일 단위)을 계산
@@ -1285,7 +1483,7 @@ function openDrawer(id){
   if(isAdmin || canApplicantDelete){
     deleteAction = `
       <div class="drawer-actions" style="margin-top:10px;">
-        <button type="button" class="btn-ghost danger" id="deleteBtn">${isAdmin ? '배너 삭제' : '신청 취소'}</button>
+        <button type="button" class="btn-ghost" id="deleteBtn">${isAdmin ? '배너 삭제' : '신청 취소'}</button>
       </div>
       <div class="reject-box" id="deleteBox" hidden>
         ${isAdmin ? '' : '<input class="input" id="deletePin" inputmode="numeric" pattern="\\d{4}" maxlength="4" placeholder="취소 비밀번호 4자리">'}
@@ -1413,10 +1611,14 @@ function populateSlotSelect(){
   document.getElementById('slotSelect').innerHTML = options.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
 }
 
+attachDatePicker({ inputId:'startDate', popId:'startDatePop', role:'start', slotSelId:'slotSelect', counterpartId:'endDate' });
+attachDatePicker({ inputId:'endDate', popId:'endDatePop', role:'end', slotSelId:'slotSelect', counterpartId:'startDate' });
+
 document.getElementById('openApply').addEventListener('click', () => {
   document.getElementById('applyForm').reset();
   populateSlotSelect();
   modalOverlay.classList.add('open');
+  document.querySelectorAll('.date-pop').forEach(p => p.hidden = true);
 });
 document.getElementById('cancelApply').addEventListener('click', () => modalOverlay.classList.remove('open'));
 /* 팝업 레이어 공통 규칙: 바깥 영역 클릭으로 닫히지 않고, 취소/신청하기 버튼으로만 닫힘 */
@@ -1477,10 +1679,14 @@ function populateInternalSlotSelect(){
   document.getElementById('int_slotSelect').innerHTML = SLOTS.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
 }
 
+attachDatePicker({ inputId:'int_startDate', popId:'int_startDatePop', role:'start', slotSelId:'int_slotSelect', counterpartId:'int_endDate' });
+attachDatePicker({ inputId:'int_endDate', popId:'int_endDatePop', role:'end', slotSelId:'int_slotSelect', counterpartId:'int_startDate' });
+
 document.getElementById('openInternal').addEventListener('click', () => {
   document.getElementById('internalForm').reset();
   populateInternalSlotSelect();
   internalOverlay.classList.add('open');
+  document.querySelectorAll('.date-pop').forEach(p => p.hidden = true);
 });
 document.getElementById('cancelInternal').addEventListener('click', () => internalOverlay.classList.remove('open'));
 /* 팝업 레이어 공통 규칙: 바깥 영역 클릭으로 닫히지 않고, 취소/등록하기 버튼으로만 닫힘 */
@@ -1493,9 +1699,14 @@ document.getElementById('internalForm').addEventListener('submit', async e => {
     showToast('종료일은 시작일 이후여야 합니다.');
     return;
   }
+  const int_slotId = document.getElementById('int_slotSelect').value;
+  if(!hasCapacity(int_slotId, start, end)){
+    showToast('선택하신 기간에는 이미 자리가 없습니다. (플로팅배너 합산 최대 3건 / 팝업 레이어 합산 최대 1건)');
+    return;
+  }
   const booking = {
     division: 'internal',
-    slotId: document.getElementById('int_slotSelect').value,
+    slotId: int_slotId,
     name: document.getElementById('int_bannerName').value,
     team: document.getElementById('int_teamName').value,
     applicant: document.getElementById('int_applicantName').value,
@@ -1510,7 +1721,9 @@ document.getElementById('internalForm').addEventListener('submit', async e => {
     await persistCreate(booking);
   }catch(err){
     console.warn(err);
-    showToast('등록 저장에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    showToast(err.message === 'slot-full'
+      ? '선택하신 기간에는 이미 자리가 없습니다. 다른 기간이나 구좌를 선택해주세요.'
+      : '등록 저장에 실패했습니다. 잠시 후 다시 시도해주세요.');
     submitBtn.disabled = false;
     return;
   }
