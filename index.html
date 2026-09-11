@@ -1666,7 +1666,9 @@ document.getElementById('applyForm').addEventListener('submit', async e => {
     appliedAt: TODAY_STR,
   };
   const submitBtn = e.target.querySelector('button[type="submit"]');
+  const submitLabel = submitBtn.textContent;
   submitBtn.disabled = true;
+  submitBtn.textContent = '신청 중...';
   try{
     await persistCreate(booking, pin);
   }catch(err){
@@ -1675,9 +1677,11 @@ document.getElementById('applyForm').addEventListener('submit', async e => {
       ? '선택하신 기간에는 이미 예약이 가득 찼습니다. 다른 기간이나 구좌를 선택해주세요.'
       : '신청 저장에 실패했습니다. 잠시 후 다시 시도해주세요.');
     submitBtn.disabled = false;
+    submitBtn.textContent = submitLabel;
     return;
   }
   submitBtn.disabled = false;
+  submitBtn.textContent = submitLabel;
   modalOverlay.classList.remove('open');
   activeStatusFilter = 'all';
   document.querySelector('.tab[data-tab="status"]').click();
@@ -1729,7 +1733,9 @@ document.getElementById('internalForm').addEventListener('submit', async e => {
     appliedAt: TODAY_STR,
   };
   const submitBtn = e.target.querySelector('button[type="submit"]');
+  const submitLabel = submitBtn.textContent;
   submitBtn.disabled = true;
+  submitBtn.textContent = '등록 중...';
   try{
     await persistCreate(booking);
   }catch(err){
@@ -1738,9 +1744,11 @@ document.getElementById('internalForm').addEventListener('submit', async e => {
       ? '선택하신 기간에는 이미 자리가 없습니다. 다른 기간이나 구좌를 선택해주세요.'
       : '등록 저장에 실패했습니다. 잠시 후 다시 시도해주세요.');
     submitBtn.disabled = false;
+    submitBtn.textContent = submitLabel;
     return;
   }
   submitBtn.disabled = false;
+  submitBtn.textContent = submitLabel;
   internalOverlay.classList.remove('open');
   activeStatusFilter = 'all';
   document.querySelector('.tab[data-tab="status"]').click();
