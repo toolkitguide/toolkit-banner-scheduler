@@ -1567,7 +1567,9 @@ function openDrawer(id){
       showToast('취소 비밀번호는 숫자 4자리입니다.');
       return;
     }
+    const btnLabel = btn.textContent;
     btn.disabled = true;
+    btn.textContent = pinEl ? '취소 중...' : '삭제 중...';
     try{
       await persistDelete(b.id, pin);
     }catch(err){
@@ -1577,6 +1579,7 @@ function openDrawer(id){
       else if(/unauthorized/.test(m)) showToast('삭제 권한이 없습니다.');
       else showToast('삭제에 실패했습니다. 잠시 후 다시 시도해주세요.');
       btn.disabled = false;
+      btn.textContent = btnLabel;
       return;
     }
     closeDrawer(); refreshStatusViews();
