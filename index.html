@@ -33,6 +33,16 @@
   }
   .app{max-width:1920px; margin:0 auto; padding:24px 28px 80px;}
 
+  /* ---------- 관리자 모드 표시 ---------- */
+  .admin-strip{
+    display:none; align-items:center; justify-content:center; gap:8px;
+    background:var(--ink); color:#fff; font-size:13.5px; font-weight:800;
+    letter-spacing:.2px; padding:9px 12px; text-align:center;
+  }
+  body.is-admin .admin-strip{display:flex;}
+  body.is-admin{background:#fff8f4;}
+  body.is-admin .app-header{border-bottom-color:var(--orange); box-shadow:0 1px 0 var(--orange);}
+
   /* ---------- header ---------- */
   .app-header{
     background:#fff; border-bottom:1px solid var(--border);
@@ -341,6 +351,7 @@
 </style>
 </head>
 <body>
+<div class="admin-strip" id="adminStrip">🔒 관리자 모드로 접속 중입니다 — 승인/반려, 내부 배너 등록이 가능합니다</div>
 <div class="app">
 
   <header class="app-header">
@@ -355,6 +366,7 @@
         <button class="btn-ghost js-open-guide" id="openGuide">신청 전 확인사항</button>
         <button class="btn-primary" id="openApply">+ 배너 신청</button>
         <button class="btn-ghost" id="openInternal" hidden>내부 배너 등록</button>
+        <button class="btn-ghost" id="changePwBtn" hidden>비밀번호 변경</button>
         <button class="btn-ghost" id="adminBtn">관리자</button>
       </div>
     </div>
@@ -573,6 +585,32 @@
   </div>
 </div>
 
+<!-- ============ 관리자 비밀번호 변경 모달 ============ -->
+<div class="modal-overlay" id="pwModalOverlay">
+  <div class="modal" style="max-width:380px;">
+    <h3>관리자 비밀번호 변경</h3>
+    <p class="modal-sub">변경 후에는 새 암호로 다시 로그인해야 합니다.</p>
+    <form id="pwForm">
+      <div class="field">
+        <label>현재 비밀번호</label>
+        <input class="input" type="password" id="pwCurrent" autocomplete="off" required>
+      </div>
+      <div class="field">
+        <label>새 비밀번호</label>
+        <input class="input" type="password" id="pwNew" autocomplete="off" minlength="4" required>
+      </div>
+      <div class="field">
+        <label>새 비밀번호 확인</label>
+        <input class="input" type="password" id="pwNewConfirm" autocomplete="off" minlength="4" required>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" id="cancelPw">취소</button>
+        <button type="submit" class="btn-primary">변경하기</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ============ 상세 드로어 ============ -->
 <div class="drawer-overlay" id="drawerOverlay"></div>
 <div class="drawer" id="drawer">
@@ -617,6 +655,36 @@ const STATUS_META = {
 /* 반려 기능 스위치. false → 반려 버튼/필터/범례 숨김(코드는 유지, 추후 재활성화 가능).
    기존 '반려' 상태 건은 이 값과 무관하게 정상 표시됩니다. */
 const REJECT_ENABLED = false;
+
+/* 공통 구좌 신청 시 동시 등록 가능 개수 제한.
+ * - 메인 플로팅 배너(A/B/C): Type 상관없이 합쳐서 동시 최대 3건
+ * - 메인 팝업 레이어(A/B, 공통): Type 상관없이 합쳐서 동시 최대 1건
+ * 그룹에 속하지 않은 구좌(내부 전용 등)는 제한 없음. */
+const CAPACITY_GROUPS = [
+  { slots:['floatA','floatB','floatC'], max:3 },
+  { slots:['layerA','layerB'], max:1 },
+];
+/* 이 상태들은 실제로 자리를 차지하는 것으로 간주(검토중도 포함 — 승인 전 중복 접수 방지) */
+const ACTIVE_STATUSES = ['review','scheduled','live'];
+
+function findCapacityGroup(slotId){
+  return CAPACITY_GROUPS.find(g => g.slots.includes(slotId));
+}
+
+/* 선택한 구좌·기간에 신규 신청이 들어갈 자리가 있는지 확인.
+ * 그룹에 속한 구좌라면, 같은 그룹 내 겹치는 기간의 기존 건수가 max 미만이어야 함. */
+function hasCapacity(slotId, start, end, excludeId){
+  const group = findCapacityGroup(slotId);
+  if(!group) return true;
+  const s = parseYMD(start), e = parseYMD(end);
+  const overlapCount = bookings.filter(b =>
+    b.id !== excludeId &&
+    group.slots.includes(b.slotId) &&
+    ACTIVE_STATUSES.includes(b.status) &&
+    parseYMD(b.start) <= e && parseYMD(b.end) >= s
+  ).length;
+  return overlapCount < group.max;
+}
 
 /* 공휴일: 게시 현황 달력에서 일요일과 동일하게 붉은 배경으로 표시됩니다.
    매년 확정 공휴일을 'YYYY-MM-DD' 로 추가/수정하세요. (대체공휴일 포함) */
@@ -793,6 +861,7 @@ document.querySelectorAll('.goto-slots').forEach(el => {
 function applyRole(){
   const isAdmin = role === 'admin';
   document.getElementById('openInternal').hidden = !isAdmin;
+  document.getElementById('changePwBtn').hidden = !isAdmin;
   const btn = document.getElementById('adminBtn');
   btn.textContent = isAdmin ? '관리자 모드 종료' : '관리자';
   btn.classList.toggle('admin-on', isAdmin);
@@ -821,7 +890,7 @@ document.getElementById('adminBtn').addEventListener('click', () => {
   }
 });
 document.getElementById('cancelAdmin').addEventListener('click', () => adminOverlay.classList.remove('open'));
-adminOverlay.addEventListener('click', e => { if(e.target === adminOverlay) adminOverlay.classList.remove('open'); });
+/* 팝업 레이어 공통 규칙: 바깥 영역 클릭으로 닫히지 않고, 취소/확인 버튼으로만 닫힘 */
 document.getElementById('adminForm').addEventListener('submit', async e => {
   e.preventDefault();
   const pw = document.getElementById('adminPw').value;
@@ -846,6 +915,49 @@ document.getElementById('adminForm').addEventListener('submit', async e => {
     showToast('암호가 올바르지 않습니다.');
     document.getElementById('adminPw').select();
   }
+});
+
+/* ---------------- 관리자 비밀번호 변경 ---------------- */
+const pwOverlay = document.getElementById('pwModalOverlay');
+document.getElementById('changePwBtn').addEventListener('click', () => {
+  document.getElementById('pwForm').reset();
+  pwOverlay.classList.add('open');
+  document.getElementById('pwCurrent').focus();
+});
+document.getElementById('cancelPw').addEventListener('click', () => pwOverlay.classList.remove('open'));
+document.getElementById('pwForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const current = document.getElementById('pwCurrent').value;
+  const next = document.getElementById('pwNew').value;
+  const confirmPw = document.getElementById('pwNewConfirm').value;
+  if(next !== confirmPw){
+    showToast('새 비밀번호가 서로 일치하지 않습니다.');
+    return;
+  }
+  if(LOCAL_MODE){
+    showToast('로컬 모드에서는 비밀번호를 변경할 수 없습니다.');
+    return;
+  }
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try{
+    await apiCall({ action:'changePassword', currentPassword: current, newPassword: next, token: adminToken });
+  }catch(err){
+    const msg = err.message === 'current-password-mismatch'
+      ? '현재 비밀번호가 올바르지 않습니다.'
+      : (err.message === 'invalid-new-password'
+        ? '새 비밀번호는 4자 이상으로 입력하세요.'
+        : '비밀번호 변경에 실패했습니다. 네트워크를 확인해주세요.');
+    showToast(msg);
+    btn.disabled = false;
+    return;
+  }
+  btn.disabled = false;
+  pwOverlay.classList.remove('open');
+  role = 'applicant';
+  adminToken = '';
+  applyRole();
+  showToast('비밀번호가 변경되었습니다. 새 암호로 다시 로그인해주세요.');
 });
 
 /* ---------------- 신청 내역 렌더 ---------------- */
@@ -1268,7 +1380,7 @@ function closeDrawer(){
   document.getElementById('drawerOverlay').classList.remove('open');
 }
 document.getElementById('closeDrawer').addEventListener('click', closeDrawer);
-document.getElementById('drawerOverlay').addEventListener('click', closeDrawer);
+/* 팝업 레이어 공통 규칙: 바깥 영역 클릭으로 닫히지 않고, ✕ 버튼으로만 닫힘 */
 
 /* ---------------- 게시 기간으로 상태 계산(내부 직접 등록용) ---------------- */
 function computeStatus(start, end){
@@ -1284,7 +1396,7 @@ document.querySelectorAll('.js-open-guide').forEach(el =>
   el.addEventListener('click', () => guideOverlay.classList.add('open')));
 document.querySelectorAll('.js-close-guide').forEach(el =>
   el.addEventListener('click', () => guideOverlay.classList.remove('open')));
-guideOverlay.addEventListener('click', e => { if(e.target === guideOverlay) guideOverlay.classList.remove('open'); });
+/* 팝업 레이어 공통 규칙: 바깥 영역 클릭으로 닫히지 않고, ✕/확인 버튼으로만 닫힘 */
 
 /* 숫자 4자리만 입력되도록 필터 */
 function digitsOnly4(el){
@@ -1307,7 +1419,7 @@ document.getElementById('openApply').addEventListener('click', () => {
   modalOverlay.classList.add('open');
 });
 document.getElementById('cancelApply').addEventListener('click', () => modalOverlay.classList.remove('open'));
-modalOverlay.addEventListener('click', e => { if(e.target === modalOverlay) modalOverlay.classList.remove('open'); });
+/* 팝업 레이어 공통 규칙: 바깥 영역 클릭으로 닫히지 않고, 취소/신청하기 버튼으로만 닫힘 */
 
 document.getElementById('applyForm').addEventListener('submit', async e => {
   e.preventDefault();
@@ -1322,9 +1434,14 @@ document.getElementById('applyForm').addEventListener('submit', async e => {
     showToast('취소 비밀번호는 숫자 4자리로 입력하세요.');
     return;
   }
+  const slotId = document.getElementById('slotSelect').value;
+  if(!hasCapacity(slotId, start, end)){
+    showToast('선택하신 기간에는 이미 예약이 가득 찼습니다. 다른 기간이나 구좌를 선택해주세요.');
+    return;
+  }
   const booking = {
     division: 'external',
-    slotId: document.getElementById('slotSelect').value,
+    slotId,
     name: document.getElementById('bannerName').value,
     team: document.getElementById('teamName').value,
     applicant: document.getElementById('applicantName').value,
@@ -1339,7 +1456,9 @@ document.getElementById('applyForm').addEventListener('submit', async e => {
     await persistCreate(booking, pin);
   }catch(err){
     console.warn(err);
-    showToast('신청 저장에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    showToast(err.message === 'slot-full'
+      ? '선택하신 기간에는 이미 예약이 가득 찼습니다. 다른 기간이나 구좌를 선택해주세요.'
+      : '신청 저장에 실패했습니다. 잠시 후 다시 시도해주세요.');
     submitBtn.disabled = false;
     return;
   }
@@ -1364,7 +1483,7 @@ document.getElementById('openInternal').addEventListener('click', () => {
   internalOverlay.classList.add('open');
 });
 document.getElementById('cancelInternal').addEventListener('click', () => internalOverlay.classList.remove('open'));
-internalOverlay.addEventListener('click', e => { if(e.target === internalOverlay) internalOverlay.classList.remove('open'); });
+/* 팝업 레이어 공통 규칙: 바깥 영역 클릭으로 닫히지 않고, 취소/등록하기 버튼으로만 닫힘 */
 
 document.getElementById('internalForm').addEventListener('submit', async e => {
   e.preventDefault();
