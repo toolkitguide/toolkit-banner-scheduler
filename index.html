@@ -54,7 +54,7 @@
   #adminBtn.admin-on{
     background:var(--orange-light); border-color:var(--orange); color:var(--orange);
   }
-  .brand{display:flex; align-items:center; gap:12px;}
+  .brand{display:flex; align-items:center; gap:12px; cursor:pointer;}
   .brand .logo{
     width:40px; height:40px; border-radius:9px; object-fit:contain; display:block;
   }
@@ -391,7 +391,7 @@
 
   <header class="app-header">
     <div class="topbar">
-      <div class="brand">
+      <div class="brand" id="brandHome" role="button" tabindex="0" title="신청 내역으로 이동">
         <img class="logo" src="toolkit_logo.svg" alt="아이스크림 툴킷 로고">
         <div>
           <div class="brand-title-row">
@@ -1053,6 +1053,14 @@ document.querySelectorAll('.tab').forEach(btn => {
     btn.classList.add('active');
     document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
   });
+});
+
+/* 로고+제목 클릭 시 첫 화면(신청 내역)으로 이동 */
+const brandHome = document.getElementById('brandHome');
+const goHome = () => document.querySelector('.tab[data-tab="status"]').click();
+brandHome.addEventListener('click', goHome);
+brandHome.addEventListener('keydown', e => {
+  if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); goHome(); }
 });
 
 /* 모달 안내문의 '구좌 안내' 링크 → 열린 모달 닫고 구좌 안내 탭으로 이동 */
