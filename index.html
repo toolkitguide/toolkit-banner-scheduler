@@ -115,6 +115,7 @@
   .chip .cdot.live{background:var(--live-dot);}
   .chip .cdot.ended{background:var(--ended-dot);}
   .chip .cdot.rejected{background:var(--reject-dot);}
+  .chip .cdot.cancelled{background:var(--ended-dot);}
   .filter-right{display:flex; gap:8px;}
   .select, .input{
     border:1px solid var(--border); border-radius:9px; padding:9px 12px; font-size:15px;
@@ -670,12 +671,37 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+/* ================= Firebase 초기화 =================
+ * firebaseConfig 는 공개되어도 되는 값입니다(보안은 firestore.rules 가 담당).
+ * Firebase 콘솔 > 프로젝트 설정 > 일반 > "웹 앱 추가"에서 나온 값을 그대로 붙여넣으세요. */
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
+import {
+  getFirestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot,
+  writeBatch, Timestamp, Bytes, serverTimestamp,
+} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import {
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut,
+  updatePassword, reauthenticateWithCredential, EmailAuthProvider,
+} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+
+const firebaseConfig = {
+  apiKey: 'AIzaSyDgxvoMztfLtpUhdTdnU4aNZ1_7VFe3FQw',
+  authDomain: 'i-scream-toolkit.firebaseapp.com',
+  projectId: 'i-scream-toolkit',
+  storageBucket: 'i-scream-toolkit.firebasestorage.app',
+  messagingSenderId: '61028035348',
+  appId: '1:61028035348:web:0a0628f40d307d80a53001',
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+const auth = getAuth(fbApp);
+const bookingsCol = collection(db, 'bookings');
+
 /* ---------------- 데이터 정의 ---------------- */
 /* 기준 날짜: 실제 오늘(로컬 기준) */
 const _now = new Date();
 const TODAY = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate());
-const TODAY_STR = `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}`;
 
 /* img: 구좌 안내 아코디언에서 보여줄 예시 이미지 경로 (index.html 과 같은 위치).
    파일이 없으면 아코디언에 "예시 이미지가 아직 없습니다" 안내가 표시됩니다. */
@@ -700,6 +726,7 @@ const STATUS_META = {
   live:      {label:'게시중',   cls:'live'},
   ended:     {label:'게시종료', cls:'ended'},
   rejected:  {label:'반려',     cls:'rejected'},
+  cancelled: {label:'취소됨',   cls:'ended'}, // 신청자 PIN 취소 — 실제 삭제 대신 상태 전환(감사 기록 보존)
 };
 
 /* 반려 기능 스위치. false → 반려 버튼/필터/범례 숨김(코드는 유지, 추후 재활성화 가능).
@@ -732,7 +759,7 @@ function hasCapacity(slotId, start, end, excludeId){
     b.id !== excludeId &&
     group.slots.includes(b.slotId) &&
     ACTIVE_STATUSES.includes(b.status) &&
-    parseYMD(b.start) <= e && parseYMD(b.end) >= s
+    b.start <= e && b.end >= s
   ).length;
   return overlapCount < group.max;
 }
@@ -754,108 +781,79 @@ const HOLIDAYS = new Set([
   '2026-12-25',                             // 성탄절
 ]);
 
-/* ================= 데이터 저장소 =================
- * API_URL 비어 있음 / localhost / file:// 로 열림
- *      → 브라우저 localStorage 에 저장 (개발·단독 사용)
- * API_URL 설정됨 (GitHub Pages 등에 배포)
- *      → Google Apps Script 웹앱 + Google 스프레드시트 에 저장 (여러 사용자 공유)
- *
- * 배포 시 아래 API_URL 에 Apps Script 웹앱 배포 주소(.../exec)를 넣으세요.
+/* ================= 데이터 저장소 (Firestore) =================
+ * bookings/{id}                     공개 문서 — division/slotId/name/team/applicant/
+ *                                    start/end/endAt/appliedAt/status/note
+ * bookings/{id}/private/secret      비공개 문서(누구도 read 불가) — pinHash
+ * 실제 보안 검증은 firestore.rules 가 담당한다. 여기 클라이언트 코드는
+ * "무엇을 보낼지"만 결정하고, Rules 가 그 요청을 허용할지 최종 판단한다.
  */
-const API_URL = 'https://script.google.com/macros/s/AKfycbzewcUfyxBYd4VIewvrvbUouTfQJmfMo6qJVuroa4rajcRIq5u988BKeOOf7cvyZHL_Vg/exec';
-
-const LOCAL_MODE =
-  !API_URL ||
-  location.protocol === 'file:' ||
-  location.hostname === 'localhost' ||
-  location.hostname === '127.0.0.1';
-
-const STORAGE_KEY = 'toolkit_banner_bookings_v1';
 let bookings = [];
-let nextId = 1;
 
-/* ---- localStorage 모드 ---- */
-function lsLoad(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return;
-    const data = JSON.parse(raw);
-    if(Array.isArray(data.bookings)) bookings = data.bookings;
-    nextId = Number.isFinite(data.nextId)
-      ? data.nextId
-      : bookings.reduce((m, b) => Math.max(m, b.id), 0) + 1;
-  }catch(e){
-    console.warn('저장된 배너 내역을 불러오지 못했습니다.', e);
-  }
-}
-function lsSave(){
-  try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ bookings, nextId }));
-  }catch(e){
-    console.warn('배너 내역을 저장하지 못했습니다.', e);
-  }
+/* Firestore Timestamp <-> JS Date 변환 헬퍼.
+ * 문서를 읽어올 때 즉시 Date 로 바꿔두면, 기존의 모든 순수 JS 날짜 로직
+ * (parseYMD/hasCapacity/renderGantt 등)을 문자열 시절과 동일하게 재사용할 수 있다. */
+function normalizeBooking(id, data){
+  return {
+    ...data,
+    id,
+    start: data.start instanceof Timestamp ? data.start.toDate() : data.start,
+    end: data.end instanceof Timestamp ? data.end.toDate() : data.end,
+    // serverTimestamp()는 서버 확정 전 로컬 낙관적 반영 시 잠깐 null일 수 있음 — 그 사이엔 현재 시각으로 표시
+    appliedAt: data.appliedAt instanceof Timestamp ? data.appliedAt.toDate() : new Date(),
+  };
 }
 
-/* ---- Google Apps Script 웹앱 호출 ----
- * GET  : 전체 목록 조회        → { ok:true, bookings:[...] }
- * POST : { action:'create', booking:{...} } → { ok:true, booking:{...id 포함...} }
- *        { action:'update', id, patch:{...} } → { ok:true }
- * POST 는 프리플라이트(CORS)를 피하려고 text/plain 으로 전송합니다.
- */
-async function apiCall(payload){
-  const opt = payload
-    ? { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }
-    : undefined;
-  const res = await fetch(API_URL, opt);
-  if(!res.ok) throw new Error('HTTP ' + res.status);
-  const data = await res.json();
-  if(data && data.ok === false) throw new Error(data.error || '요청 실패');
-  return data;
-}
-
-/* ---- 공통 인터페이스 (모드에 관계없이 이 3개만 호출) ---- */
-async function loadBookings(){
-  if(LOCAL_MODE){ lsLoad(); return; }
-  const data = await apiCall(null);
-  bookings = Array.isArray(data.bookings) ? data.bookings.map(normalizeBooking) : [];
+/* SHA-256 해시를 Firestore Bytes 로 반환 (firestore.rules 의 hashing.sha256() 과 동일 형식/입력) */
+async function sha256Bytes(text){
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Bytes.fromUint8Array(new Uint8Array(digest));
 }
 
 async function persistCreate(booking, pin){
-  if(LOCAL_MODE){
-    booking.id = nextId++;
-    if(pin) booking.pin = pin;   // 개발(로컬) 모드: 취소 비밀번호를 평문 저장
-    bookings.push(booking);
-    lsSave();
-    return booking;
+  const ref = doc(bookingsCol); // 문서 ID를 미리 확보해 pinHash 계산에 사용
+  const startDate = parseYMD(booking.start);
+  const endDate = parseYMD(booking.end);
+  const payload = {
+    division: booking.division,
+    slotId: booking.slotId,
+    name: booking.name,
+    team: booking.team,
+    applicant: booking.applicant,
+    note: booking.note,
+    status: booking.status,
+    start: Timestamp.fromDate(startDate),
+    end: Timestamp.fromDate(endDate),
+    endAt: Timestamp.fromDate(addDays(endDate, 1)), // 자동 상태 전환용 배타적 경계(규칙 전용, 화면에는 안 씀)
+    appliedAt: serverTimestamp(),
+  };
+  const batch = writeBatch(db);
+  batch.set(ref, payload);
+  if(pin){
+    const pinHash = await sha256Bytes(String(pin) + ':' + ref.id);
+    batch.set(doc(ref, 'private', 'secret'), { pinHash });
   }
-  const data = await apiCall({ action:'create', booking, pin, token: adminToken });
-  if(data.booking) bookings.push(normalizeBooking(data.booking));
-  else await loadBookings();
-  return data.booking;
+  await batch.commit();
+  return ref.id;
 }
 
 async function persistUpdate(id, patch){
-  const b = bookings.find(x => x.id === id);
-  if(b) Object.assign(b, patch);
-  if(LOCAL_MODE){ lsSave(); return; }
-  await apiCall({ action:'update', id, patch, token: adminToken });
+  await updateDoc(doc(bookingsCol, id), patch);
 }
 
+/* 관리자: 무조건 삭제. 신청자: PIN 2단계 검증 후 status 를 'cancelled' 로 전환(진짜 삭제는 하지 않음 —
+ * Firestore delete 요청은 페이로드를 실을 수 없어 Rules 에서 PIN 을 검증할 방법이 없기 때문). */
 async function persistDelete(id, pin){
-  if(!LOCAL_MODE){
-    await apiCall({ action:'delete', id, pin, token: adminToken });
-  }else{
-    const b = bookings.find(x => x.id === id);
-    if(b && b.pin && role !== 'admin' && b.pin !== pin) throw new Error('pin-mismatch');
+  if(role === 'admin'){
+    await deleteDoc(doc(bookingsCol, id));
+    return;
   }
-  const i = bookings.findIndex(x => x.id === id);
-  if(i >= 0) bookings.splice(i, 1);
-  if(LOCAL_MODE) lsSave();
-}
-
-/* 시트에서 온 값의 타입 보정 (id 는 숫자여야 함) */
-function normalizeBooking(b){
-  return { ...b, id: Number(b.id) };
+  try{
+    await updateDoc(doc(bookingsCol, id, 'private', 'secret'), { pinAttempt: String(pin), verified: true });
+  }catch(e){
+    throw new Error('pin-mismatch');
+  }
+  await updateDoc(doc(bookingsCol, id), { status: 'cancelled' });
 }
 
 let activeStatusFilter = 'all';
@@ -865,18 +863,44 @@ let currentMonth = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
 let role = 'applicant';
 let isLoading = true;   // 최초 데이터 로딩 중 여부 (로딩 중 빈 화면과 실제 빈 상태를 구분하기 위함)
 
-/* 관리자 인증
- * - 공유 모드: 암호는 Apps Script 스크립트 속성 ADMIN_PASSWORD 에만 존재(소스에 없음).
- *   입력한 암호를 서버가 검증하고 토큰을 발급 → 관리자 전용 요청에 토큰 첨부.
- * - 로컬 모드(개발): 아래 LOCAL_ADMIN_PW 로만 확인. 배포본에는 영향 없음. */
-const LOCAL_ADMIN_PW = 'dev';
-let adminToken = '';
+/* ================= 관리자 인증 (Firebase Authentication) =================
+ * admins/{uid} 문서가 존재하면 관리자로 취급한다(문서는 Firebase 콘솔에서 수동 생성,
+ * firestore.rules 가 본인 uid 외에는 read 를 막는다).
+ * 관리자 계정이 1개뿐이라 이메일은 고정하고 화면에서는 비밀번호만 입력받는다. */
+const ADMIN_EMAIL = 'toolkitguide@gmail.com';
 
 async function verifyAdmin(password){
-  if(LOCAL_MODE) return password === LOCAL_ADMIN_PW;
-  const data = await apiCall({ action:'login', password });
-  if(data.authenticated && data.token){ adminToken = data.token; return true; }
-  return false;
+  try{
+    await signInWithEmailAndPassword(auth, ADMIN_EMAIL, password);
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function logoutAdmin(){
+  signOut(auth).catch(e => console.warn(e));
+}
+
+async function changeAdminPassword(currentPassword, newPassword){
+  const user = auth.currentUser;
+  if(!user) throw new Error('not-signed-in');
+  const cred = EmailAuthProvider.credential(user.email, currentPassword);
+  try{
+    await reauthenticateWithCredential(user, cred);
+  }catch(e){
+    throw new Error('current-password-mismatch');
+  }
+  await updatePassword(user, newPassword);
+}
+
+async function checkIsAdmin(uid){
+  try{
+    const snap = await getDoc(doc(db, 'admins', uid));
+    return snap.exists();
+  }catch(e){
+    return false;
+  }
 }
 
 const slotById = id => SLOTS.find(s => s.id === id);
@@ -903,7 +927,7 @@ function isDayFull(group, date){
   return bookings.filter(b =>
     group.slots.includes(b.slotId) &&
     ACTIVE_STATUSES.includes(b.status) &&
-    parseYMD(b.start) <= date && parseYMD(b.end) >= date
+    b.start <= date && b.end >= date
   ).length >= group.max;
 }
 function firstFullDayFrom(group, fromDate, horizonDays){
@@ -1096,9 +1120,7 @@ function openAdminModal(){
 }
 document.getElementById('adminBtn').addEventListener('click', () => {
   if(role === 'admin'){
-    role = 'applicant';
-    adminToken = '';
-    applyRole();
+    logoutAdmin();
     showToast('관리자 모드를 종료했습니다.');
   } else {
     openAdminModal();
@@ -1126,10 +1148,9 @@ document.getElementById('adminForm').addEventListener('submit', async e => {
   btn.disabled = false;
   btn.textContent = originalLabel;
   if(ok){
-    role = 'admin';
     adminOverlay.classList.remove('open');
-    applyRole();
     showToast('관리자 화면으로 전환되었습니다.');
+    // role 갱신은 onAuthStateChanged → applyRole() 이 처리
   } else {
     showToast('암호가 올바르지 않습니다.');
     document.getElementById('adminPw').select();
@@ -1153,30 +1174,25 @@ document.getElementById('pwForm').addEventListener('submit', async e => {
     showToast('새 비밀번호가 서로 일치하지 않습니다.');
     return;
   }
-  if(LOCAL_MODE){
-    showToast('로컬 모드에서는 비밀번호를 변경할 수 없습니다.');
+  if(next.length < 4){
+    showToast('새 비밀번호는 4자 이상으로 입력하세요.');
     return;
   }
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
   try{
-    await apiCall({ action:'changePassword', currentPassword: current, newPassword: next, token: adminToken });
+    await changeAdminPassword(current, next);
   }catch(err){
     const msg = err.message === 'current-password-mismatch'
       ? '현재 비밀번호가 올바르지 않습니다.'
-      : (err.message === 'invalid-new-password'
-        ? '새 비밀번호는 4자 이상으로 입력하세요.'
-        : '비밀번호 변경에 실패했습니다. 네트워크를 확인해주세요.');
+      : '비밀번호 변경에 실패했습니다. 네트워크를 확인해주세요.';
     showToast(msg);
     btn.disabled = false;
     return;
   }
   btn.disabled = false;
   pwOverlay.classList.remove('open');
-  role = 'applicant';
-  adminToken = '';
-  applyRole();
-  showToast('비밀번호가 변경되었습니다. 새 암호로 다시 로그인해주세요.');
+  showToast('비밀번호가 변경되었습니다.');
 });
 
 /* ---------------- 신청 내역 렌더 ---------------- */
@@ -1237,7 +1253,7 @@ function renderStatusTable(){
     </tr>`;
   }).join('');
   tbody.querySelectorAll('tr[data-id]').forEach(tr => {
-    tr.addEventListener('click', () => openDrawer(Number(tr.dataset.id)));
+    tr.addEventListener('click', () => openDrawer(tr.dataset.id));
   });
 }
 
@@ -1319,7 +1335,7 @@ function renderGantt(){
     const items = bookings
       .filter(b => b.slotId === slot.id)
       .filter(b => ganttStatusFilter === 'all' || b.status === ganttStatusFilter)
-      .map(b => ({ b, bs: parseYMD(b.start), be: parseYMD(b.end) }))
+      .map(b => ({ b, bs: b.start, be: b.end }))
       .filter(it => it.be >= monthStart && it.bs <= monthEnd)
       .map(it => ({
         b: it.b,
@@ -1359,7 +1375,7 @@ function renderGantt(){
   document.getElementById('ganttGrid').innerHTML = html;
 
   document.querySelectorAll('.bar').forEach(bar => {
-    bar.addEventListener('click', () => openDrawer(Number(bar.dataset.id)));
+    bar.addEventListener('click', () => openDrawer(bar.dataset.id));
   });
 }
 
@@ -1428,7 +1444,7 @@ function autoExpire(){
   const t = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
   const changed = [];
   bookings.forEach(b => {
-    if((b.status === 'live' || b.status === 'scheduled') && t > parseYMD(b.end)){
+    if((b.status === 'live' || b.status === 'scheduled') && t > b.end){
       b.status = 'ended';
       changed.push(b);
     }
@@ -1442,7 +1458,7 @@ function autoActivate(){
   const t = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
   const changed = [];
   bookings.forEach(b => {
-    if(b.status === 'scheduled' && t >= parseYMD(b.start) && t <= parseYMD(b.end)){
+    if(b.status === 'scheduled' && t >= b.start && t <= b.end){
       b.status = 'live';
       changed.push(b);
     }
@@ -1458,14 +1474,10 @@ function autoTransition(){
 function refreshStatusViews(){
   const { expired, activated } = autoTransition();
   renderStatusChips(); renderStatusTable(); renderGanttChips(); renderGantt();
-  if(LOCAL_MODE){
-    lsSave();
-  }else{
-    // 자동 전환분은 시트에도 반영 (한 번만 기록됨).
-    // 서버는 날짜 조건이 실제로 충족된 status:'ended' / 'live' 변경은 토큰 없이도 허용
-    expired.forEach(b => apiCall({ action:'update', id:b.id, patch:{ status:'ended' }, token: adminToken }).catch(e => console.warn(e)));
-    activated.forEach(b => apiCall({ action:'update', id:b.id, patch:{ status:'live' }, token: adminToken }).catch(e => console.warn(e)));
-  }
+  // 자동 전환분은 Firestore에도 반영. Rules는 날짜 조건이 실제로 충족된
+  // status:'ended' / 'live' 변경만 비인증 상태에서도 허용한다(firestore.rules 참고).
+  expired.forEach(b => persistUpdate(b.id, { status:'ended' }).catch(e => console.warn(e)));
+  activated.forEach(b => persistUpdate(b.id, { status:'live' }).catch(e => console.warn(e)));
 }
 
 function openDrawer(id){
@@ -1674,7 +1686,6 @@ document.getElementById('applyForm').addEventListener('submit', async e => {
     start, end,
     status: 'review',
     note: document.getElementById('noteText').value || '-',
-    appliedAt: TODAY_STR,
   };
   const submitBtn = e.target.querySelector('button[type="submit"]');
   const submitLabel = submitBtn.textContent;
@@ -1741,7 +1752,6 @@ document.getElementById('internalForm').addEventListener('submit', async e => {
     start, end,
     status: computeStatus(start, end),
     note: document.getElementById('int_noteText').value || '-',
-    appliedAt: TODAY_STR,
   };
   const submitBtn = e.target.querySelector('button[type="submit"]');
   const submitLabel = submitBtn.textContent;
@@ -1778,7 +1788,7 @@ function showToast(msg){
 }
 
 /* ---------------- 초기 렌더 ---------------- */
-async function init(){
+function init(){
   renderSlotGuide();
   applyRole();          // 관리자 여부에 따른 UI + 초기 표(빈 상태) 렌더
   renderStatusChips();
@@ -1786,28 +1796,21 @@ async function init(){
   renderGantt();
   renderStatusTable();  // 데이터 도착 전: "불러오는 중" 표시 (isLoading=true 상태)
 
-  try{
-    await loadBookings();
-  }catch(err){
+  // 관리자 로그인 상태 변화 감지: admins/{uid} 문서 존재 여부로 role 판정
+  onAuthStateChanged(auth, async user => {
+    role = (user && await checkIsAdmin(user.uid)) ? 'admin' : 'applicant';
+    applyRole();
+  });
+
+  // 실시간 구독: 다른 사용자의 변경이 폴링 없이 즉시 반영된다.
+  onSnapshot(bookingsCol, snapshot => {
+    bookings = snapshot.docs.map(d => normalizeBooking(d.id, d.data()));
+    isLoading = false;
+    refreshStatusViews();  // autoExpire/autoActivate 반영 + 전체 재렌더
+  }, err => {
     console.warn(err);
     showToast('데이터를 불러오지 못했습니다. 네트워크 확인 후 새로고침 해주세요.');
-  }
-  isLoading = false;
-  refreshStatusViews();  // autoExpire + 저장 + 전체 재렌더
-
-  // 시트 모드: 다른 사용자의 변경을 주기적으로 반영 (60초, 모달·드로어 열려있으면 건너뜀)
-  if(!LOCAL_MODE){
-    setInterval(async () => {
-      if(document.hidden) return;
-      if(document.querySelector('.modal-overlay.open')) return;
-      if(document.getElementById('drawer').classList.contains('open')) return;
-      try{
-        await loadBookings();
-        autoTransition();
-        renderStatusChips(); renderStatusTable(); renderGanttChips(); renderGantt();
-      }catch(e){ /* 조용히 무시 */ }
-    }, 60000);
-  }
+  });
 }
 init();
 </script>
